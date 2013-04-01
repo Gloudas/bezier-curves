@@ -13,7 +13,7 @@ RM = /bin/rm -f
 all: main 
 main: bezier.o 
 	$(CC) $(CFLAGS) -o as3 bezier.o $(LDFLAGS) 
-example_01.o: bezier.cpp
+bezier.o: bezier.cpp
 	$(CC) $(CFLAGS) -c bezier.cpp -o bezier.o
 clean: 
 	$(RM) *.o as3
