@@ -3,6 +3,8 @@
 #include <fstream>
 #include <cmath>
 #include <stdlib.h>
+#include <stdio.h>
+#include <sstream>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -39,9 +41,17 @@ public:
 
 class BezierPatch {
 public:
+	BezierPatch();
 	// stores the Vector3 values for each of the (16) control points
 	vector< vector< Vector3> > points;
 };
+
+BezierPatch::BezierPatch() {
+	points.resize(4);
+	for(unsigned int i=0; i<4; i++) {
+		points[i].resize(4);
+	}
+}
 
 //****************************************************
 // Global Variables
@@ -118,10 +128,10 @@ void computeUniformSubdivision(const BezierPatch inputBezier, BezierPatch *outpu
 	unsigned int i,j,ki,kj;
 	double mui, muj, bi, bj;
 
-	int ni = input.points.size();
-	int nj = input.points[0].size();
-	int resolutionI = ni * (int)(1.0/subdivision);
-	int resolutionJ = nj * (int)(1.0/subdivision);
+	int ni = inputBezier.points.size();
+	int nj = inputBezier.points[0].size();
+	int resolutionI = ni * (int)(1.001/subdivision);
+	int resolutionJ = nj * (int)(1.001/subdivision);
 
 	vector< vector< Vector3> > input = inputBezier.points;
 	// instantiate the output bezier with size resolutionI * resolutionJ
@@ -131,7 +141,7 @@ void computeUniformSubdivision(const BezierPatch inputBezier, BezierPatch *outpu
 		output[i].resize(resolutionJ);
 	}
 
-	for (i=0; i<resolutionI, i++) {
+	for (i=0; i<resolutionI; i++) {
 		mui = i / (double)(resolutionI-1);	// note: i dont understand the -1 here. Maybe because there is an extra point added in bezier?
 		for (j=0; j<resolutionJ; j++) {
 			muj = j / (double)(resolutionJ-1);
@@ -142,15 +152,15 @@ void computeUniformSubdivision(const BezierPatch inputBezier, BezierPatch *outpu
 				bi = BezierBlend(ki, mui, ni);
 				for (kj=0; kj<nj; kj++) {
 					bj = BezierBlend(kj, muj, nj);
-					output[i][j].x += (input[i][j].x * bi * bj);
-					output[i][j].y += (input[i][j].y * bi * bj);
-					output[i][j].z += (input[i][j].z * bi * bj);
+					output[i][j].x += (input[ki][kj].x * bi * bj);
+					output[i][j].y += (input[ki][kj].y * bi * bj);
+					output[i][j].z += (input[ki][kj].z * bi * bj);
 				}
 			}
 		}		
 	}
 
-	newBezier->points = output;
+	outputBezier->points = output;
 }
 
 //***************************************************
@@ -163,12 +173,13 @@ void myDisplay() {
 	glMatrixMode(GL_MODELVIEW);                  // indicate we are specifying camera transformations
 	glLoadIdentity();                            // make sure transformation is "zero'd"
 	glColor3f(1.0f,0.0f,0.0f); 		//default of red dot
+	glPointSize(1.0f);
 
 	//----------------------- code to draw objects --------------------------
 
 	// compute all bezier patches
 	for(unsigned int i=0; i<numPatches; i++) {
-		BezierPatch outputPatch;
+		BezierPatch outputPatch = BezierPatch();
 		// TODO - calculate outputPatch adaptively if appropriate
 		computeUniformSubdivision(inputPatches[i], &outputPatch);
 		outputPatches.push_back(outputPatch);
@@ -184,7 +195,7 @@ void myDisplay() {
 		for (unsigned int i=0; i<ni; i++) {
 			for (unsigned int j=0; j<nj; j++) {
 				// for now, just draw dots for each control point
-				glBegin(GL_POLYGON);
+				glBegin(GL_POINTS);
 				glVertex3f(nextPatch.points[i][j].x, nextPatch.points[i][j].y, nextPatch.points[i][j].z);
 				glEnd();
 			}
@@ -219,8 +230,6 @@ void myFrameMove() {
 
 void parseInput(string file) {
 
-	int numberOfPatches;
-
 	ifstream inpfile(file.c_str());
 	if(!inpfile.is_open()) {
 		cout << "Unable to open file" << endl;
@@ -228,63 +237,65 @@ void parseInput(string file) {
 
 		// process first line -> number of patches
 		if (inpfile.good()) {
-			string line;
+			string line, numPatchesString;
 			getline(inpfile,line);
-			if (line.size() != 0) {
-				numberOfPatches = atoi(line[0]);
-			}
+			stringstream ss(line);
+			ss >> numPatchesString;
+			numPatches = atoi(numPatchesString.c_str());
 		}
 
 		// parse all bezier patches 
+		BezierPatch newBezier = BezierPatch();
+		int row = 0;
+
 		while(inpfile.good()) {
 
-			/*
-
-			TODO
-
 			vector<string> splitline;
-			string buf;
+			string line, token;
 
 			getline(inpfile,line);
 			stringstream ss(line);
-
-			while (ss >> buf) {
-				splitline.push_back(buf);
+			while (ss >> token) {
+				splitline.push_back(token);
 			}
 
 			// blank line -- move onto next patch
 			if(splitline.size() == 0) {
+				inputPatches.push_back(newBezier);
+				newBezier = BezierPatch();
+				row = 0;
 				continue;
-			}
-			//Ignore comments
-			if(splitline[0][0] == '#') {
-				continue;
-			}
-
-			//Valid commands:
-			//size width height
-			//  must be first command of file, controls image size
-			else if(!splitline[0].compare("size")) {
-				width = atoi(splitline[1].c_str());
-				height = atoi(splitline[2].c_str());
-				scene->screenWidth = width;
-				scene->screenHeight = height;
-			}
-			//background r g b
-			//sets the background color to something other than black
-			else if(!splitline[0].compare("background")) {
-				scene->background_r = atof(splitline[1].c_str());
-				scene->background_g = atof(splitline[2].c_str());
-				scene->background_b = atof(splitline[3].c_str());
-
+			} else if (splitline.size() == 12) {
+				// assume input patch has 16 * 3 values
+				newBezier.points[row][0].x = atof(splitline[0].c_str());
+				newBezier.points[row][0].y = atof(splitline[1].c_str());
+				newBezier.points[row][0].z = atof(splitline[2].c_str());
+				newBezier.points[row][1].x = atof(splitline[3].c_str());
+				newBezier.points[row][1].y = atof(splitline[4].c_str());
+				newBezier.points[row][1].z = atof(splitline[5].c_str());
+				newBezier.points[row][2].x = atof(splitline[6].c_str());
+				newBezier.points[row][2].y = atof(splitline[7].c_str());
+				newBezier.points[row][2].z = atof(splitline[8].c_str());
+				newBezier.points[row][3].x = atof(splitline[9].c_str());
+				newBezier.points[row][3].y = atof(splitline[10].c_str());
+				newBezier.points[row][3].z = atof(splitline[11].c_str());
+				row++;	
 			} else {
-				cerr << "Unknown command: " << splitline[0] << endl;
+				cout << "there was an issue with parsing input files \n" << endl;
 			}
-			*/
 		}
 
-
 		inpfile.close();
+	}
+	int debug;
+	debug = 5;
+
+	for(unsigned int i=0; i<4; i++) {
+		for(unsigned int j=0; j<4; j++) {
+			cout << inputPatches[0].points[i][j].x << " ";
+			cout << inputPatches[0].points[i][j].y << " ";
+			cout << inputPatches[0].points[i][j].z << endl;
+		}
 	}
 }
 
