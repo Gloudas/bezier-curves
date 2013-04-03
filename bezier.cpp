@@ -75,6 +75,7 @@ bool* keyStates = new bool[256];
 bool* specialKeys = new bool[256];
 
 bool toggleWireframe = true;
+bool toggleSmooth = false;
 
 float x = 0.0, y = 0.0, z = 5.0;
 float translate_x = 0.0, translate_y = 0.0;
@@ -122,6 +123,11 @@ void normalKeysDown(unsigned char key, int x, int y) {
 
 void normalKeysUp(unsigned char key, int x, int y) {
 	keyStates[key] = false;
+	if(key == 'w') {
+		toggleWireframe = !toggleWireframe;
+	} else if(key == 's') {
+		toggleSmooth = !toggleSmooth;
+	}
 }
 
 void specialKeysDown(int key, int x, int y) {
@@ -175,8 +181,6 @@ void keyOperations() {
 		} else {
 			angle_x += 0.1f;
 		}
-	} else if (keyStates['w']) {
-		toggleWireframeDisplay();
 	}
 }
 
@@ -188,7 +192,7 @@ void initScene(){
   myReshape(viewport.w,viewport.h);
 }
 
-double BezierBlend(int k, double mu, int n) {
+/*double BezierBlend(int k, double mu, int n) {
 
 	int nn,kn,nkn;
 	double blend=1;
@@ -254,7 +258,7 @@ void computeUniformSubdivision(const BezierPatch inputBezier, BezierPatch *outpu
 	}
 
 	outputBezier->points = output;
-}
+}*/
 
 //***************************************************
 // function that does the actual drawing
@@ -338,7 +342,7 @@ PointAndNormal bezPatchInterp(BezierPatch patch, float u, float v) {
 	return output;
 }
 
-void subDividePatch(const BezierPatch patch, vector<PointAndNormal>* newPoints) {
+void subDividePatch(const BezierPatch patch, vector <vector<PointAndNormal> > & newPoints) {
 	// computer number of subdivisions for our step size
 	int numDiv = (int)(1.001/subdivision);
 	float u,v;
@@ -347,12 +351,14 @@ void subDividePatch(const BezierPatch patch, vector<PointAndNormal>* newPoints) 
 
 	for (iu=0; iu<numDiv; iu++) {
 		u = iu * subdivision;
+		vector<PointAndNormal> newVector;
+		newPoints.push_back(newVector);
 		for (iv=0; iv<numDiv; iv++) {
 			v = iv * subdivision;
 
 			// evaluate the point and normal
 			point = bezPatchInterp(patch, u, v);
-			newPoints->push_back(point);
+			newPoints[iu].push_back(point);
 
 		}
 	}
@@ -376,36 +382,60 @@ void myDisplay() {
 	glColor3f(1.0f,0.0f,0.0f); 		//default of red dot
 	glPointSize(1.0f);
 
+
+	if(toggleSmooth) {
+		//cout<<"SMooth toggled"<<endl;
+		//glEnable(GL_SMOOTH);
+		glShadeModel(GL_SMOOTH);
+	} else {
+		//cout<<"Flat"<<endl;
+		//glEnable(GL_FLAT);
+		glShadeModel(GL_FLAT);
+	}
+
 	if(toggleWireframe) {
 		glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 	} else {
 		glPolygonMode( GL_FRONT_AND_BACK, GL_LINE);
 	}
+
+	//glEnable(GL_LIGHTING);
+	//glEnable(GL_LIGHT0);
 	
-	glutSolidTorus(0.5, 3, 15, 30);
+	//glutSolidTorus(0.5, 3, 5, 10);
 
 	//----------------------- code to draw objects --------------------------
 
 	// a vector of a collection of points which correspond to a bezier patch's output
-	vector< vector<PointAndNormal> > allOutputPoints;
-	allOutputPoints.resize(numPatches);
+	vector <vector< vector<PointAndNormal> > > allOutputPoints;
+	//allOutputPoints.resize(numPatches);
 
 	// compute all bezier patches
 	for(unsigned int i=0; i<numPatches; i++) {
 
-		vector<PointAndNormal> newPoints;
-		subDividePatch(inputPatches[i], &newPoints);
+		vector <vector<PointAndNormal> > newPoints;
+		subDividePatch(inputPatches[i], newPoints);
 		allOutputPoints.push_back(newPoints);
 
 		//computeUniformSubdivision(inputPatches[i], &outputPatch);
 		//outputPatches.push_back(outputPatch);
 	}
 
-	for(unsigned int i=0; i<allOutputPoints.size(); i++) {
-		for (unsigned int j=0; j<allOutputPoints[i].size(); j++) {
-			glBegin(GL_POINTS);
-			glVertex3f(allOutputPoints[i][j].point.x, allOutputPoints[i][j].point.y, allOutputPoints[i][j].point.z);
-			glEnd();
+	for(unsigned int patch=0; patch<allOutputPoints.size(); patch++) {
+		for (unsigned int i=0; i<(allOutputPoints[patch].size()-1); i++) {
+			for (unsigned int j = 0; j<(allOutputPoints[patch][i].size()-1); j++) {
+				glBegin(GL_QUADS);
+				glVertex3f(allOutputPoints[patch][i][j].point.x, allOutputPoints[patch][i][j].point.y, allOutputPoints[patch][i][j].point.z);
+				glVertex3f(allOutputPoints[patch][i+1][j].point.x, allOutputPoints[patch][i+1][j].point.y, allOutputPoints[patch][i+1][j].point.z);
+				glVertex3f(allOutputPoints[patch][i+1][j+1].point.x, allOutputPoints[patch][i+1][j+1].point.y, allOutputPoints[patch][i+1][j+1].point.z);
+				glVertex3f(allOutputPoints[patch][i][j+1].point.x, allOutputPoints[patch][i][j+1].point.y, allOutputPoints[patch][i][j+1].point.z);
+				glEnd();
+
+
+				/*glBegin(GL_POINTS);e
+				glVertex3f(allOutputPoints[i][j].point.x, allOutputPoints[i][j].point.y, allOutputPoints[i][j].point.z);
+				glEnd();*/
+			}
 		}
 	}
 
