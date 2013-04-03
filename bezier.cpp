@@ -402,7 +402,7 @@ void myDisplay() {
 	glColor3f(.2f,0.0f,0.0f); 		//default of red dot
 	glPointSize(1.0f);
 
-
+	/* commented out for now
 	if(toggleSmooth) {
 		//cout<<"SMooth toggled"<<endl;
 		//glEnable(GL_SMOOTH);
@@ -411,7 +411,8 @@ void myDisplay() {
 		//cout<<"Flat"<<endl;
 		//glEnable(GL_FLAT);
 		glShadeModel(GL_FLAT);
-	}
+	} */
+	glShadeModel(GL_SMOOTH);	
 
 	if(toggleWireframe) {
 		glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
@@ -456,30 +457,33 @@ void myDisplay() {
 		for (unsigned int i=0; i<(allOutputPoints[patch].size()-1); i++) {
 			//glBegin(GL_LINE_STRIP);
 			for (unsigned int j = 0; j<(allOutputPoints[patch][i].size()-1); j++) {
-				glBegin(GL_POLYGON);
-
-				//glVertex3f(allOutputPoints[patch][i][j].point.x, allOutputPoints[patch][i][j].point.y, allOutputPoints[patch][i][j].point.z);
-
-				// used later for shading
-				glNormal3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
-
+				
+				glBegin(GL_TRIANGLES);
 				//cout << "here's a normal:   " << allOutputPoints[patch][i][j].normal.x << allOutputPoints[patch][i][j].normal.y << allOutputPoints[patch][i][j].normal.z << endl;
-				glColor3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
-				//glColor3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
+				glNormal3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
 				glVertex3f(allOutputPoints[patch][i][j].point.x, allOutputPoints[patch][i][j].point.y, allOutputPoints[patch][i][j].point.z);
+
+				glNormal3f(allOutputPoints[patch][i+1][j].normal.x, allOutputPoints[patch][i+1][j].normal.y, allOutputPoints[patch][i+1][j].normal.z);
 				glVertex3f(allOutputPoints[patch][i+1][j].point.x, allOutputPoints[patch][i+1][j].point.y, allOutputPoints[patch][i+1][j].point.z);
-				glVertex3f(allOutputPoints[patch][i+1][j+1].point.x, allOutputPoints[patch][i+1][j+1].point.y, allOutputPoints[patch][i+1][j+1].point.z);
+
+				glNormal3f(allOutputPoints[patch][i][j+1].normal.x, allOutputPoints[patch][i][j+1].normal.y, allOutputPoints[patch][i][j+1].normal.z);
 				glVertex3f(allOutputPoints[patch][i][j+1].point.x, allOutputPoints[patch][i][j+1].point.y, allOutputPoints[patch][i][j+1].point.z);
 				glEnd();
 
-				/*glBegin(GL_POINTS);e
-				glVertex3f(allOutputPoints[i][j].point.x, allOutputPoints[i][j].point.y, allOutputPoints[i][j].point.z);
-				glEnd();*/
+				glBegin(GL_TRIANGLES);
+				//cout << "here's a normal:   " << allOutputPoints[patch][i][j].normal.x << allOutputPoints[patch][i][j].normal.y << allOutputPoints[patch][i][j].normal.z << endl;
+				glNormal3f(allOutputPoints[patch][i+1][j].normal.x, allOutputPoints[patch][i+1][j].normal.y, allOutputPoints[patch][i+1][j].normal.z);
+				glVertex3f(allOutputPoints[patch][i+1][j].point.x, allOutputPoints[patch][i+1][j].point.y, allOutputPoints[patch][i+1][j].point.z);
+
+				glNormal3f(allOutputPoints[patch][i+1][j+1].normal.x, allOutputPoints[patch][i+1][j+1].normal.y, allOutputPoints[patch][i+1][j+1].normal.z);
+				glVertex3f(allOutputPoints[patch][i+1][j+1].point.x, allOutputPoints[patch][i+1][j+1].point.y, allOutputPoints[patch][i+1][j+1].point.z);
+
+				glNormal3f(allOutputPoints[patch][i][j+1].normal.x, allOutputPoints[patch][i][j+1].normal.y, allOutputPoints[patch][i][j+1].normal.z);
+				glVertex3f(allOutputPoints[patch][i][j+1].point.x, allOutputPoints[patch][i][j+1].point.y, allOutputPoints[patch][i][j+1].point.z);
+				glEnd();
+
 			}
-			//glEnd();
 		}
-		//glEnd();
-		//cout<<"Got out"<<endl;
 	}
 
 	/*for(unsigned int patch=0; patch<allOutputPoints.size(); patch++) {
@@ -648,7 +652,7 @@ int main(int argc, char *argv[]) {
 	glutInitWindowPosition(0, 0);
 	glutCreateWindow("as3 Bezier Curves");
 	initScene();        
-	glutInit(&argc, argv);
+	//glutInit(&argc, argv);
 	//This tells glut to use a double-buffered window with red, green, and blue channels                        // quick function to set up scene
 	glutDisplayFunc(myDisplay);                  // function to run when its time to draw something
 	glutReshapeFunc(myReshape);                  // function to run when the window gets resized
