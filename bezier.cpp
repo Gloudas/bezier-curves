@@ -192,6 +192,7 @@ void initScene(){
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
 	glEnable(GL_LIGHT1);
+	glEnable(GLUT_DEPTH);
 
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear to black, fully transparent
   myReshape(viewport.w,viewport.h);
@@ -358,11 +359,11 @@ void subDividePatch(const BezierPatch patch, vector <vector<PointAndNormal> > & 
 	unsigned int iu, iv;
 	PointAndNormal point;
 
-	for (iu=0; iu<numDiv; iu++) {
+	for (iu=0; iu<=numDiv; iu++) {
 		u = iu * subdivision;
 		vector<PointAndNormal> newVector;
 		newPoints.push_back(newVector);
-		for (iv=0; iv<numDiv; iv++) {
+		for (iv=0; iv<=numDiv; iv++) {
 			v = iv * subdivision;
 
 			// evaluate the point and normal
@@ -378,6 +379,7 @@ void myDisplay() {
 	keyOperations();
 
 	glClear(GL_COLOR_BUFFER_BIT);                // clear the color buffer (sets everything to black)
+	glClear(GL_DEPTH_BUFFER_BIT);
 	glMatrixMode(GL_MODELVIEW);                  // indicate we are specifying camera transformations
 	glLoadIdentity();   
 
@@ -440,16 +442,19 @@ void myDisplay() {
     GLfloat lightPos1[] = {-1.0f, 0.5f, 3.5f, 0.0f};
     glLightfv(GL_LIGHT1, GL_DIFFUSE, lightColor1);
     glLightfv(GL_LIGHT1, GL_POSITION, lightPos1);
-
+    //cout<<"Got to drawing"<<endl;
 	for(unsigned int patch=0; patch<allOutputPoints.size(); patch++) {
 		for (unsigned int i=0; i<(allOutputPoints[patch].size()-1); i++) {
+			//glBegin(GL_LINE_STRIP);
 			for (unsigned int j = 0; j<(allOutputPoints[patch][i].size()-1); j++) {
 				glBegin(GL_QUADS);
+
+				//glVertex3f(allOutputPoints[patch][i][j].point.x, allOutputPoints[patch][i][j].point.y, allOutputPoints[patch][i][j].point.z);
 
 				// used later for shading
 				glNormal3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
 
-				cout << "here's a normal:   " << allOutputPoints[patch][i][j].normal.x << allOutputPoints[patch][i][j].normal.y << allOutputPoints[patch][i][j].normal.z << endl;
+				//cout << "here's a normal:   " << allOutputPoints[patch][i][j].normal.x << allOutputPoints[patch][i][j].normal.y << allOutputPoints[patch][i][j].normal.z << endl;
 				glColor3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
 				glVertex3f(allOutputPoints[patch][i][j].point.x, allOutputPoints[patch][i][j].point.y, allOutputPoints[patch][i][j].point.z);
 				glVertex3f(allOutputPoints[patch][i+1][j].point.x, allOutputPoints[patch][i+1][j].point.y, allOutputPoints[patch][i+1][j].point.z);
@@ -462,8 +467,40 @@ void myDisplay() {
 				glVertex3f(allOutputPoints[i][j].point.x, allOutputPoints[i][j].point.y, allOutputPoints[i][j].point.z);
 				glEnd();*/
 			}
+			//glEnd();
 		}
+		//glEnd();
+		//cout<<"Got out"<<endl;
 	}
+
+	/*for(unsigned int patch=0; patch<allOutputPoints.size(); patch++) {
+		for (unsigned int i=0; i<allOutputPoints[patch].size(); i++) {
+			glBegin(GL_LINE_STRIP);
+			for (unsigned int j = 0; j<allOutputPoints[patch][i].size(); j++) {
+				//glBegin(GL_QUADS);
+
+				glVertex3f(allOutputPoints[patch][j][i].point.x, allOutputPoints[patch][j][i].point.y, allOutputPoints[patch][j][i].point.z);
+
+				// used later for shading
+				/*glNormal3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
+
+				cout << "here's a normal:   " << allOutputPoints[patch][i][j].normal.x << allOutputPoints[patch][i][j].normal.y << allOutputPoints[patch][i][j].normal.z << endl;
+				glColor3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
+				glVertex3f(allOutputPoints[patch][i][j].point.x, allOutputPoints[patch][i][j].point.y, allOutputPoints[patch][i][j].point.z);
+				glVertex3f(allOutputPoints[patch][i+1][j].point.x, allOutputPoints[patch][i+1][j].point.y, allOutputPoints[patch][i+1][j].point.z);
+				glVertex3f(allOutputPoints[patch][i+1][j+1].point.x, allOutputPoints[patch][i+1][j+1].point.y, allOutputPoints[patch][i+1][j+1].point.z);
+				glVertex3f(allOutputPoints[patch][i][j+1].point.x, allOutputPoints[patch][i][j+1].point.y, allOutputPoints[patch][i][j+1].point.z);
+				glEnd();*/
+
+
+				/*glBegin(GL_POINTS);e
+				glVertex3f(allOutputPoints[i][j].point.x, allOutputPoints[i][j].point.y, allOutputPoints[i][j].point.z);
+				glEnd();
+			}
+			//glEnd();
+		}
+		glEnd();
+	}*/
 
 	/* old version
 	// draw all bezier patches
@@ -492,6 +529,7 @@ void myDisplay() {
 	glEnd(); */
 	//-----------------------------------------------------------------------
 
+	//glClear(GL_DEPTH_BUFFER_BIT);
 	glFlush();
 	glutSwapBuffers();                           // swap buffers (we earlier set double buffer)
 }
@@ -591,7 +629,8 @@ int main(int argc, char *argv[]) {
 	//This initializes glut
 	glutInit(&argc, argv);
 	//This tells glut to use a double-buffered window with red, green, and blue channels 
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+	//glEnable(GL_DEPTH_TEST);
 	// Initalize theviewport size
 	viewport.w = 800;
 	viewport.h = 800;
@@ -599,7 +638,9 @@ int main(int argc, char *argv[]) {
 	glutInitWindowSize(viewport.w, viewport.h);
 	glutInitWindowPosition(0, 0);
 	glutCreateWindow("as3 Bezier Curves");
-	initScene();                                 // quick function to set up scene
+	initScene();        
+	glutInit(&argc, argv);
+	//This tells glut to use a double-buffered window with red, green, and blue channels                        // quick function to set up scene
 	glutDisplayFunc(myDisplay);                  // function to run when its time to draw something
 	glutReshapeFunc(myReshape);                  // function to run when the window gets resized
 	glutIdleFunc(myFrameMove);                   // function to run when not handling any other task
