@@ -77,9 +77,9 @@ bool* specialKeys = new bool[256];
 bool toggleWireframe = true;
 bool toggleSmooth = false;
 
-float x = 0.0, y = 0.0, z = 5.0;
-float translate_x = 0.0, translate_y = 0.0;
-float angle_x = 0.0, angle_y = 0.0;
+float x = 0.0, y = 5.0, z = 0.0;
+float translate_x = 0.0, translate_z = 0.0;
+float angle_x = 0.0, angle_z = 0.0;
 
 //****************************************************
 // reshape viewport if the window is resized
@@ -145,41 +145,41 @@ void toggleWireframeDisplay() {
 
 void keyOperations() {
 	if(keyStates['-']) {
-		z += 0.5f;
-		if(z >= 40.0f) {
-			z = 40.0f;
+		y += 0.5f;
+		if(y >= 40.0f) {
+			y = 40.0f;
 		}
 	} else if (keyStates['=']) {
 		//int mod = glutGetModifiers();
 		//if(shift_pressed) {
-			z += -0.01f;
-			if(z <= 1.0f) {
-				z = 1.0f;
+			y +=-0.01f;
+			if(y <= 1.0f) {
+				y = 1.0f;
 			}
 		//}
 	} else if(specialKeys[GLUT_KEY_LEFT]) {
 		if(shift_pressed) {
-			translate_x -= 0.01f;
+			translate_x += 0.01f;
 		} else {
-			angle_y -= 0.1f;
+			angle_z -= 5.0f;
 		}
 	} else if(specialKeys[GLUT_KEY_RIGHT]) {
 		if(shift_pressed) {
-			translate_x += 0.01f;
+			translate_x -= 0.01f;
 		} else {
-			angle_y += 0.1f;
+			angle_z += 5.0f;
 		}
 	} else if(specialKeys[GLUT_KEY_UP]) {
 		if(shift_pressed) {
-			translate_y += 0.01f;
+			translate_z += 0.01f;
 		} else {
-			angle_x -= 10.f; //.1
+			angle_x += 5.f; //.1
 		}
 	} else if(specialKeys[GLUT_KEY_DOWN]) {
 		if(shift_pressed) {
-			translate_y -= 0.01f;
+			translate_z -= 0.01f;
 		} else {
-			angle_x += 0.1f;
+			angle_x -= 5.0f;
 		}
 	}
 }
@@ -392,12 +392,14 @@ void myDisplay() {
 	glMatrixMode(GL_MODELVIEW);                  // indicate we are specifying camera transformations
 	glLoadIdentity();   
 
-	gluLookAt(x, y, z, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+	gluLookAt(x, y, z, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
 
 
-	glTranslatef(translate_x, translate_y, 0.0f);
+	
+	glTranslatef(translate_x, 0.0f, translate_z);
+
+	glRotatef(angle_z, 0.0, 0.0, 1.0);
 	glRotatef(angle_x, 1.0, 0.0, 0.0);
-	glRotatef(angle_y, 0.0, 1.0, 0.0);
 	                         // make sure transformation is "zero'd"
 	glColor3f(.2f,0.0f,0.0f); 		//default of red dot
 	glPointSize(1.0f);
@@ -648,7 +650,6 @@ int main(int argc, char *argv[]) {
 	glutInitWindowPosition(0, 0);
 	glutCreateWindow("as3 Bezier Curves");
 	initScene();        
-	glutInit(&argc, argv);
 	//This tells glut to use a double-buffered window with red, green, and blue channels                        // quick function to set up scene
 	glutDisplayFunc(myDisplay);                  // function to run when its time to draw something
 	glutReshapeFunc(myReshape);                  // function to run when the window gets resized
