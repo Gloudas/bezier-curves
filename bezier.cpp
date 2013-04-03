@@ -71,6 +71,13 @@ vector<BezierPatch> outputPatches;
 float subdivision;
 bool uniform;
 
+bool* keyStates = new bool[256];
+bool* specialKeys = new bool[256];
+
+float x = 0.0, y = 0.0, z = 5.0;
+float translate_x = 0.0, translate_y = 0.0;
+float angle_x = 0.0, angle_y = 0.0;
+
 //****************************************************
 // reshape viewport if the window is resized
 //****************************************************
@@ -80,7 +87,9 @@ void myReshape(int w, int h) {
 
   glViewport(0,0,viewport.w,viewport.h);// sets the rectangle that will be the window
   glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();                // loading the identity matrix for the screen
+  glLoadIdentity(); 
+  gluPerspective(60.0, (float)w/h, 1, 40);               // loading the identity matrix for the screen
+  //gluLookAt(x, y, z, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
   //----------- setting the projection -------------------------
   // glOrtho sets left, right, bottom, top, zNear, zFar of the chord system
@@ -88,10 +97,80 @@ void myReshape(int w, int h) {
   // glOrtho(-1, 1 + (w-400)/200.0 , -1 -(h-400)/200.0, 1, 1, -1); // resize type = add
   // glOrtho(-w/400.0, w/400.0, -h/400.0, h/400.0, 1, -1); // resize type = center
 
-  glOrtho(-1, 1, -1, 1, 1, -1);    // resize type = stretch
+  //glOrtho(-1, 1, -1, 1, 1, -1);    // resize type = stretch
   //------------------------------------------------------------
 }
 
+//****************************************************
+// Keyboard Event Handling
+//***************************************************
+bool shift_pressed;
+
+void normalKeysDown(unsigned char key, int x, int y) {
+	keyStates[key] = true;
+
+	shift_pressed = (glutGetModifiers() == GLUT_ACTIVE_SHIFT);
+	if(key == 27) {
+		exit(0);
+	} else if(key==15) {
+		cout<<"SHIFT PRESSED"<<endl;
+	}
+
+}
+
+void normalKeysUp(unsigned char key, int x, int y) {
+	keyStates[key] = false;
+}
+
+void specialKeysDown(int key, int x, int y) {
+	specialKeys[key] = true;
+	shift_pressed = (glutGetModifiers() == GLUT_ACTIVE_SHIFT);
+}
+
+void specialKeysUp(int key, int x, int y) {
+	specialKeys[key] = false;
+}
+
+void keyOperations() {
+	if(keyStates['-']) {
+		z += 0.01f;
+		if(z >= 40.0f) {
+			z = 40.0f;
+		}
+	} else if (keyStates['=']) {
+		//int mod = glutGetModifiers();
+		//if(shift_pressed) {
+			z += -0.01f;
+			if(z <= 1.0f) {
+				z = 1.0f;
+			}
+		//}
+	} else if(specialKeys[GLUT_KEY_LEFT]) {
+		if(shift_pressed) {
+			translate_x -= 0.01f;
+		} else {
+			angle_y -= 0.1f;
+		}
+	} else if(specialKeys[GLUT_KEY_RIGHT]) {
+		if(shift_pressed) {
+			translate_x += 0.01f;
+		} else {
+			angle_y += 0.1f;
+		}
+	} else if(specialKeys[GLUT_KEY_UP]) {
+		if(shift_pressed) {
+			translate_y += 0.01f;
+		} else {
+			angle_x -= 0.1f;
+		}
+	} else if(specialKeys[GLUT_KEY_DOWN]) {
+		if(shift_pressed) {
+			translate_y -= 0.01f;
+		} else {
+			angle_x += 0.1f;
+		}
+	}
+}
 
 //****************************************************
 // sets the window up
@@ -273,11 +352,22 @@ void subDividePatch(const BezierPatch patch, vector<PointAndNormal>* newPoints) 
 
 void myDisplay() {
 
+	keyOperations();
+
 	glClear(GL_COLOR_BUFFER_BIT);                // clear the color buffer (sets everything to black)
 	glMatrixMode(GL_MODELVIEW);                  // indicate we are specifying camera transformations
-	glLoadIdentity();                            // make sure transformation is "zero'd"
+	glLoadIdentity();   
+
+	gluLookAt(x, y, z, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+
+
+	glTranslatef(translate_x, translate_y, 0.0f);
+	glRotatef(angle_x, 1.0, 0.0, 0.0);
+	glRotatef(angle_y, 0.0, 1.0, 0.0);
+	                         // make sure transformation is "zero'd"
 	glColor3f(1.0f,0.0f,0.0f); 		//default of red dot
 	glPointSize(5.0f);
+	//glutWireTorus(0.5, 3, 15, 30);
 
 	//----------------------- code to draw objects --------------------------
 
@@ -418,6 +508,7 @@ void parseInput(string file) {
 	}
 }
 
+
 int main(int argc, char *argv[]) {
 
 	// patch input file
@@ -449,6 +540,12 @@ int main(int argc, char *argv[]) {
 	glutDisplayFunc(myDisplay);                  // function to run when its time to draw something
 	glutReshapeFunc(myReshape);                  // function to run when the window gets resized
 	glutIdleFunc(myFrameMove);                   // function to run when not handling any other task
+
+	glutKeyboardFunc(normalKeysDown);
+	glutKeyboardUpFunc(normalKeysUp);
+	glutSpecialFunc(specialKeysDown);
+	glutSpecialUpFunc(specialKeysUp);
+
 	glutMainLoop();                              // infinite loop that will keep drawing and resizing and whatever else
 
 	return 0;

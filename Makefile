@@ -12,9 +12,9 @@ endif
 RM = /bin/rm -f 
 all: main 
 main: bezier.o 
-	$(CC) $(CFLAGS) -o as3 bezier.o $(LDFLAGS) 
+	$(CC) $(CFLAGS) -o as3 bezier.o SupportClasses.o $(LDFLAGS) 
 bezier.o: bezier.cpp
-	$(CC) $(CFLAGS) -c bezier.cpp -o bezier.o
+	$(CC) $(CFLAGS) -c bezier.cpp SupportClasses.cpp -o SupportClasses.o bezier.o
 clean: 
 	$(RM) *.o as3
  
