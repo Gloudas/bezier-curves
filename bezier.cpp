@@ -145,7 +145,7 @@ void toggleWireframeDisplay() {
 
 void keyOperations() {
 	if(keyStates['-']) {
-		z += 0.01f;
+		z += 0.5f;
 		if(z >= 40.0f) {
 			z = 40.0f;
 		}
@@ -173,7 +173,7 @@ void keyOperations() {
 		if(shift_pressed) {
 			translate_y += 0.01f;
 		} else {
-			angle_x -= 0.1f;
+			angle_x -= 10.f; //.1
 		}
 	} else if(specialKeys[GLUT_KEY_DOWN]) {
 		if(shift_pressed) {
@@ -188,6 +188,11 @@ void keyOperations() {
 // sets the window up
 //****************************************************
 void initScene(){
+
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_LIGHT1);
+
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear to black, fully transparent
   myReshape(viewport.w,viewport.h);
 }
@@ -279,7 +284,10 @@ Point bezCurveInterp(vector<Point> curve, const float u, Vector3* deriv) {
 	p = D*(1.0-u) + E*u;
 
 	Vector3 temp = Vector3::pointSubtraction(E, D) * 3;
-	deriv = new Vector3(temp.x, temp.y, temp.z);
+	//deriv = new Vector3(temp.x, temp.y, temp.z);
+	(*deriv).x = temp.x;
+	(*deriv).y = temp.y;
+	(*deriv).z = temp.z;
 
 	return p;
 }
@@ -335,6 +343,7 @@ PointAndNormal bezPatchInterp(BezierPatch patch, float u, float v) {
 	// take cross product of partials to find normal
 	temp = Vector3();
 	temp = Vector3::crossProduct(dPdv, dPdu);
+	temp = temp.normalize();
 	output.normal.x = temp.x;
 	output.normal.y = temp.y;
 	output.normal.z = temp.z;
@@ -379,7 +388,7 @@ void myDisplay() {
 	glRotatef(angle_x, 1.0, 0.0, 0.0);
 	glRotatef(angle_y, 0.0, 1.0, 0.0);
 	                         // make sure transformation is "zero'd"
-	glColor3f(1.0f,0.0f,0.0f); 		//default of red dot
+	glColor3f(.2f,0.0f,0.0f); 		//default of red dot
 	glPointSize(1.0f);
 
 
@@ -421,10 +430,27 @@ void myDisplay() {
 		//outputPatches.push_back(outputPatch);
 	}
 
+	//Add ambient light
+    GLfloat ambientColor[] = {0.2f, 0.2f, 0.2f, 1.0f}; //Color(0.2, 0.2, 0.2)
+    glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientColor);
+
+    //Add directed light
+    GLfloat lightColor1[] = {0.5f, 0.2f, 0.2f, 1.0f}; //Color (0.5, 0.2, 0.2)
+    //Coming from the direction (-1, 0.5, 0.5)
+    GLfloat lightPos1[] = {-1.0f, 0.5f, 3.5f, 0.0f};
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, lightColor1);
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPos1);
+
 	for(unsigned int patch=0; patch<allOutputPoints.size(); patch++) {
 		for (unsigned int i=0; i<(allOutputPoints[patch].size()-1); i++) {
 			for (unsigned int j = 0; j<(allOutputPoints[patch][i].size()-1); j++) {
 				glBegin(GL_QUADS);
+
+				// used later for shading
+				glNormal3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
+
+				cout << "here's a normal:   " << allOutputPoints[patch][i][j].normal.x << allOutputPoints[patch][i][j].normal.y << allOutputPoints[patch][i][j].normal.z << endl;
+				glColor3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
 				glVertex3f(allOutputPoints[patch][i][j].point.x, allOutputPoints[patch][i][j].point.y, allOutputPoints[patch][i][j].point.z);
 				glVertex3f(allOutputPoints[patch][i+1][j].point.x, allOutputPoints[patch][i+1][j].point.y, allOutputPoints[patch][i+1][j].point.z);
 				glVertex3f(allOutputPoints[patch][i+1][j+1].point.x, allOutputPoints[patch][i+1][j+1].point.y, allOutputPoints[patch][i+1][j+1].point.z);
@@ -567,8 +593,8 @@ int main(int argc, char *argv[]) {
 	//This tells glut to use a double-buffered window with red, green, and blue channels 
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
 	// Initalize theviewport size
-	viewport.w = 400;
-	viewport.h = 400;
+	viewport.w = 800;
+	viewport.h = 800;
 	//The size and position of the window
 	glutInitWindowSize(viewport.w, viewport.h);
 	glutInitWindowPosition(0, 0);
