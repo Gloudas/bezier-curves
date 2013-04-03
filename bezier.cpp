@@ -1,3 +1,4 @@
+#include "SupportClasses.h"
 #include <vector>
 #include <iostream>
 #include <fstream>
@@ -25,20 +26,9 @@
 
 using namespace std;
 
-
 //****************************************************
 // Some Classes
 //****************************************************
-class Viewport {
-  public:
-    int w, h; // width and height
-};
-
-class Vector3 {
-public:
-	float x,y,z;
-};
-
 class BezierPatch {
 public:
 	BezierPatch();
@@ -53,11 +43,28 @@ BezierPatch::BezierPatch() {
 	}
 }
 
+class PointAndNormal {
+public:
+	PointAndNormal();
+	PointAndNormal(Point p, Normal n);
+	Point point;
+	Normal normal;
+};
+
+PointAndNormal::PointAndNormal() {
+	this->point = Point();
+	this->normal = Normal();
+}
+
+PointAndNormal::PointAndNormal(Point p, Normal n) {
+	this->point = p;
+	this->normal = n;
+}
+
 //****************************************************
 // Global Variables
 //****************************************************
 Viewport    viewport;
-
 int numPatches;
 vector<BezierPatch> inputPatches;
 vector<BezierPatch> outputPatches;
@@ -82,7 +89,6 @@ void myReshape(int w, int h) {
   // glOrtho(-w/400.0, w/400.0, -h/400.0, h/400.0, 1, -1); // resize type = center
 
   glOrtho(-1, 1, -1, 1, 1, -1);    // resize type = stretch
-
   //------------------------------------------------------------
 }
 
@@ -166,30 +172,143 @@ void computeUniformSubdivision(const BezierPatch inputBezier, BezierPatch *outpu
 //***************************************************
 // function that does the actual drawing
 //***************************************************
+
+// takes in a curve and a parametric value, returns a point and (optionally) assigns a derivative
+Point bezCurveInterp(vector<Point> curve, const float u, Vector3* deriv) {
+	Point A, B, C, D, E, p;
+
+	A = curve[0]*(1.0-u) + curve[1]*u;
+	B = curve[1]*(1.0-u) + curve[2]*u;
+	C = curve[2]*(1.0-u) + curve[3]*u;
+
+	D = A*(1.0-u) + B*u;
+	E = B*(1.0-u) + C*u;
+
+	// pick the point on the curve
+	p = D*(1.0-u) + E*u;
+
+	Vector3 temp = Vector3::pointSubtraction(E, D) * 3;
+	deriv = new Vector3(temp.x, temp.y, temp.z);
+
+	return p;
+}
+
+PointAndNormal bezPatchInterp(BezierPatch patch, float u, float v) {
+	
+	PointAndNormal output;
+	vector<Point> vcurve(4);
+	vector<Point> ucurve(4);
+	Vector3 dPdv, dPdu, temp;
+
+	// evaluate control points for v curve
+	vector<Point> tempCurve(4);
+	for (unsigned int i=0; i<4; i++) {
+		tempCurve[i] = patch.points[0][i].vectorToPoint();
+	}
+	vcurve[0] = bezCurveInterp(tempCurve, u, &temp);
+	for (unsigned int i=0; i<4; i++) {
+		tempCurve[i] = patch.points[1][i].vectorToPoint();
+	}
+	vcurve[1] = bezCurveInterp(tempCurve, u, &temp);
+	for (unsigned int i=0; i<4; i++) {
+		tempCurve[i] = patch.points[2][i].vectorToPoint();
+	}
+	vcurve[2] = bezCurveInterp(tempCurve, u, &temp);
+	for (unsigned int i=0; i<4; i++) {
+		tempCurve[i] = patch.points[3][i].vectorToPoint();
+	}
+	vcurve[3] = bezCurveInterp(tempCurve, u, &temp);
+
+	// evaluate control points for u curve
+	for (unsigned int i=0; i<4; i++) {
+		tempCurve[i] = patch.points[i][0].vectorToPoint();
+	}
+	ucurve[0] = bezCurveInterp(tempCurve, v, &temp);
+	for (unsigned int i=0; i<4; i++) {
+		tempCurve[i] = patch.points[i][1].vectorToPoint();
+	}
+	ucurve[1] = bezCurveInterp(tempCurve, v, &temp);
+	for (unsigned int i=0; i<4; i++) {
+		tempCurve[i] = patch.points[i][2].vectorToPoint();
+	}
+	ucurve[2] = bezCurveInterp(tempCurve, v, &temp);
+	for (unsigned int i=0; i<4; i++) {
+		tempCurve[i] = patch.points[i][3].vectorToPoint();
+	}
+	ucurve[3] = bezCurveInterp(tempCurve, v, &temp);
+
+	// evaluate surface and derivative for u and v
+	output.point = bezCurveInterp(vcurve, v, &dPdv);
+	output.point = bezCurveInterp(ucurve, u, &dPdu);
+
+	// take cross product of partials to find normal
+	temp = Vector3();
+	temp = Vector3::crossProduct(dPdv, dPdu);
+	output.normal.x = temp.x;
+	output.normal.y = temp.y;
+	output.normal.z = temp.z;
+
+	return output;
+}
+
+void subDividePatch(const BezierPatch patch, vector<PointAndNormal>* newPoints) {
+	// computer number of subdivisions for our step size
+	int numDiv = (int)(1.001/subdivision);
+	float u,v;
+	unsigned int iu, iv;
+	PointAndNormal point;
+
+	for (iu=0; iu<numDiv; iu++) {
+		u = iu * subdivision;
+		for (iv=0; iv<numDiv; iv++) {
+			v = iv * subdivision;
+
+			// evaluate the point and normal
+			point = bezPatchInterp(patch, u, v);
+			newPoints->push_back(point);
+
+		}
+	}
+}
+
 void myDisplay() {
 
 	glClear(GL_COLOR_BUFFER_BIT);                // clear the color buffer (sets everything to black)
-
 	glMatrixMode(GL_MODELVIEW);                  // indicate we are specifying camera transformations
 	glLoadIdentity();                            // make sure transformation is "zero'd"
 	glColor3f(1.0f,0.0f,0.0f); 		//default of red dot
-	glPointSize(1.0f);
+	glPointSize(5.0f);
 
 	//----------------------- code to draw objects --------------------------
 
+	// a vector of a collection of points which correspond to a bezier patch's output
+	vector< vector<PointAndNormal> > allOutputPoints;
+	allOutputPoints.resize(numPatches);
+
 	// compute all bezier patches
 	for(unsigned int i=0; i<numPatches; i++) {
-		BezierPatch outputPatch = BezierPatch();
-		// TODO - calculate outputPatch adaptively if appropriate
-		computeUniformSubdivision(inputPatches[i], &outputPatch);
-		outputPatches.push_back(outputPatch);
+
+		vector<PointAndNormal> newPoints;
+		subDividePatch(inputPatches[i], &newPoints);
+		allOutputPoints.push_back(newPoints);
+
+		//computeUniformSubdivision(inputPatches[i], &outputPatch);
+		//outputPatches.push_back(outputPatch);
 	}
 
+	for(unsigned int i=0; i<allOutputPoints.size(); i++) {
+		for (unsigned int j=0; j<allOutputPoints[i].size(); j++) {
+			glBegin(GL_POINTS);
+			glVertex3f(allOutputPoints[i][j].point.x, allOutputPoints[i][j].point.y, allOutputPoints[i][j].point.z);
+			glEnd();
+		}
+	}
+
+	/* old version
 	// draw all bezier patches
 	for(unsigned int i=0; i<numPatches; i++) {
 
 		BezierPatch nextPatch = outputPatches[i];
-
 		int ni = nextPatch.points.size();
 		int nj = nextPatch.points[0].size();
 		for (unsigned int i=0; i<ni; i++) {
@@ -200,7 +319,7 @@ void myDisplay() {
 				glEnd();
 			}
 		}
-	}
+	}*/
 
 	/* LEFTOVER STUFF
 	glColor3f(1.0f,0.0f,0.0f);                   // setting the color to pure red 90% for the rect
