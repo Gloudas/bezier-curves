@@ -288,6 +288,9 @@ Point bezCurveInterp(vector<Point> curve, const float u, Vector3* deriv) {
 	(*deriv).x = temp.x;
 	(*deriv).y = temp.y;
 	(*deriv).z = temp.z;
+	if (temp.x==0 && temp.y==0 && temp.z==0) {
+		int debug = 5;
+	}
 
 	return p;
 }
@@ -347,6 +350,12 @@ PointAndNormal bezPatchInterp(BezierPatch patch, float u, float v) {
 	output.normal.x = temp.x;
 	output.normal.y = temp.y;
 	output.normal.z = temp.z;
+	if (temp.x != temp.x) {
+		// x is nan
+		output.normal.x = 0;
+		output.normal.y = 0;
+		output.normal.z = 0;
+	}
 
 	return output;
 }
@@ -358,11 +367,11 @@ void subDividePatch(const BezierPatch patch, vector <vector<PointAndNormal> > & 
 	unsigned int iu, iv;
 	PointAndNormal point;
 
-	for (iu=0; iu<numDiv; iu++) {
+	for (iu=0; iu<=numDiv; iu++) {
 		u = iu * subdivision;
 		vector<PointAndNormal> newVector;
 		newPoints.push_back(newVector);
-		for (iv=0; iv<numDiv; iv++) {
+		for (iv=0; iv<=numDiv; iv++) {
 			v = iv * subdivision;
 
 			// evaluate the point and normal
@@ -444,19 +453,18 @@ void myDisplay() {
 	for(unsigned int patch=0; patch<allOutputPoints.size(); patch++) {
 		for (unsigned int i=0; i<(allOutputPoints[patch].size()-1); i++) {
 			for (unsigned int j = 0; j<(allOutputPoints[patch][i].size()-1); j++) {
-				glBegin(GL_QUADS);
+				glBegin(GL_POLYGON);
 
 				// used later for shading
 				glNormal3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
 
 				cout << "here's a normal:   " << allOutputPoints[patch][i][j].normal.x << allOutputPoints[patch][i][j].normal.y << allOutputPoints[patch][i][j].normal.z << endl;
-				glColor3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
+				//glColor3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
 				glVertex3f(allOutputPoints[patch][i][j].point.x, allOutputPoints[patch][i][j].point.y, allOutputPoints[patch][i][j].point.z);
 				glVertex3f(allOutputPoints[patch][i+1][j].point.x, allOutputPoints[patch][i+1][j].point.y, allOutputPoints[patch][i+1][j].point.z);
 				glVertex3f(allOutputPoints[patch][i+1][j+1].point.x, allOutputPoints[patch][i+1][j+1].point.y, allOutputPoints[patch][i+1][j+1].point.z);
 				glVertex3f(allOutputPoints[patch][i][j+1].point.x, allOutputPoints[patch][i][j+1].point.y, allOutputPoints[patch][i][j+1].point.z);
 				glEnd();
-
 
 				/*glBegin(GL_POINTS);e
 				glVertex3f(allOutputPoints[i][j].point.x, allOutputPoints[i][j].point.y, allOutputPoints[i][j].point.z);
