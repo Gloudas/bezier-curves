@@ -77,9 +77,9 @@ bool* specialKeys = new bool[256];
 bool toggleWireframe = true;
 bool toggleSmooth = false;
 
-float x = 0.0, y = 0.0, z = 5.0;
-float translate_x = 0.0, translate_y = 0.0;
-float angle_x = 0.0, angle_y = 0.0;
+float x = 0.0, y = 5.0, z = 0.0;
+float translate_x = 0.0, translate_z = 0.0;
+float angle_x = 0.0, angle_z = 0.0;
 
 //****************************************************
 // reshape viewport if the window is resized
@@ -145,41 +145,41 @@ void toggleWireframeDisplay() {
 
 void keyOperations() {
 	if(keyStates['-']) {
-		z += 0.5f;
-		if(z >= 40.0f) {
-			z = 40.0f;
+		y += 0.5f;
+		if(y >= 40.0f) {
+			y = 40.0f;
 		}
 	} else if (keyStates['=']) {
 		//int mod = glutGetModifiers();
 		//if(shift_pressed) {
-			z += -0.01f;
-			if(z <= 1.0f) {
-				z = 1.0f;
+			y +=-0.01f;
+			if(y <= 1.0f) {
+				y = 1.0f;
 			}
 		//}
 	} else if(specialKeys[GLUT_KEY_LEFT]) {
 		if(shift_pressed) {
-			translate_x -= 0.01f;
+			translate_x += 0.01f;
 		} else {
-			angle_y -= 0.1f;
+			angle_z -= 5.0f;
 		}
 	} else if(specialKeys[GLUT_KEY_RIGHT]) {
 		if(shift_pressed) {
-			translate_x += 0.01f;
+			translate_x -= 0.01f;
 		} else {
-			angle_y += 0.1f;
+			angle_z += 5.0f;
 		}
 	} else if(specialKeys[GLUT_KEY_UP]) {
 		if(shift_pressed) {
-			translate_y += 0.01f;
+			translate_z += 0.01f;
 		} else {
-			angle_x -= 10.f; //.1
+			angle_x += 5.f; //.1
 		}
 	} else if(specialKeys[GLUT_KEY_DOWN]) {
 		if(shift_pressed) {
-			translate_y -= 0.01f;
+			translate_z -= 0.01f;
 		} else {
-			angle_x += 0.1f;
+			angle_x -= 5.0f;
 		}
 	}
 }
@@ -392,17 +392,19 @@ void myDisplay() {
 	glMatrixMode(GL_MODELVIEW);                  // indicate we are specifying camera transformations
 	glLoadIdentity();   
 
-	gluLookAt(x, y, z, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+	gluLookAt(x, y, z, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
 
 
-	glTranslatef(translate_x, translate_y, 0.0f);
+	
+	glTranslatef(translate_x, 0.0f, translate_z);
+
+	glRotatef(angle_z, 0.0, 0.0, 1.0);
 	glRotatef(angle_x, 1.0, 0.0, 0.0);
-	glRotatef(angle_y, 0.0, 1.0, 0.0);
 	                         // make sure transformation is "zero'd"
 	glColor3f(.2f,0.0f,0.0f); 		//default of red dot
 	glPointSize(1.0f);
 
-	/* commented out for now
+	//commented out for now
 	if(toggleSmooth) {
 		//cout<<"SMooth toggled"<<endl;
 		//glEnable(GL_SMOOTH);
@@ -411,8 +413,7 @@ void myDisplay() {
 		//cout<<"Flat"<<endl;
 		//glEnable(GL_FLAT);
 		glShadeModel(GL_FLAT);
-	} */
-	glShadeModel(GL_SMOOTH);	
+	}
 
 	if(toggleWireframe) {
 		glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
@@ -426,6 +427,23 @@ void myDisplay() {
 	//glutSolidTorus(0.5, 3, 5, 10);
 
 	//----------------------- code to draw objects --------------------------
+	//Add ambient light
+    GLfloat ambientColor[] = {0.5f, 0.5f, 0.5f, 1.0f}; //Color(0.2, 0.2, 0.2)
+    glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientColor);
+
+    //Add directed light
+    GLfloat lightColor1[] = {0.5f, 0.2f, 0.2f, 1.0f}; //Color (0.5, 0.2, 0.2)
+    //Coming from the direction (-1, 0.5, 0.5)
+    GLfloat lightPos1[] = {-1.0f, 0.5f, 3.5f, 0.0f};
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, lightColor1);
+    glLightfv(GL_LIGHT1, GL_POSITION, lightPos1);
+
+	//Add positioned light
+    GLfloat lightColor0[] = {0.5f, 0.5f, 0.5f, 1.0f}; //Color (0.5, 0.5, 0.5)
+    GLfloat lightPos0[] = {4.0f, 0.0f, 8.0f, 1.0f}; //Positioned at (4, 0, 8)
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightColor0);
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
+
 
 	// a vector of a collection of points which correspond to a bezier patch's output
 	vector <vector< vector<PointAndNormal> > > allOutputPoints;
@@ -437,109 +455,46 @@ void myDisplay() {
 		vector <vector<PointAndNormal> > newPoints;
 		subDividePatch(inputPatches[i], newPoints);
 		allOutputPoints.push_back(newPoints);
-
-		//computeUniformSubdivision(inputPatches[i], &outputPatch);
-		//outputPatches.push_back(outputPatch);
 	}
+	
 
-	//Add ambient light
-    GLfloat ambientColor[] = {0.2f, 0.2f, 0.2f, 1.0f}; //Color(0.2, 0.2, 0.2)
-    glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientColor);
+    if (uniform) {
+		for(unsigned int patch=0; patch<allOutputPoints.size(); patch++) {
+			for (unsigned int i=0; i<(allOutputPoints[patch].size()-1); i++) {
+				//glBegin(GL_LINE_STRIP);
+				for (unsigned int j = 0; j<(allOutputPoints[patch][i].size()-1); j++) {
+					
+					glBegin(GL_TRIANGLES);
+					//cout << "here's a normal:   " << allOutputPoints[patch][i][j].normal.x << allOutputPoints[patch][i][j].normal.y << allOutputPoints[patch][i][j].normal.z << endl;
+					glNormal3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
+					glVertex3f(allOutputPoints[patch][i][j].point.x, allOutputPoints[patch][i][j].point.y, allOutputPoints[patch][i][j].point.z);
 
-    //Add directed light
-    GLfloat lightColor1[] = {0.5f, 0.2f, 0.2f, 1.0f}; //Color (0.5, 0.2, 0.2)
-    //Coming from the direction (-1, 0.5, 0.5)
-    GLfloat lightPos1[] = {-1.0f, 0.5f, 3.5f, 0.0f};
-    glLightfv(GL_LIGHT1, GL_DIFFUSE, lightColor1);
-    glLightfv(GL_LIGHT1, GL_POSITION, lightPos1);
-    //cout<<"Got to drawing"<<endl;
-	for(unsigned int patch=0; patch<allOutputPoints.size(); patch++) {
-		for (unsigned int i=0; i<(allOutputPoints[patch].size()-1); i++) {
-			//glBegin(GL_LINE_STRIP);
-			for (unsigned int j = 0; j<(allOutputPoints[patch][i].size()-1); j++) {
-				
-				glBegin(GL_TRIANGLES);
-				//cout << "here's a normal:   " << allOutputPoints[patch][i][j].normal.x << allOutputPoints[patch][i][j].normal.y << allOutputPoints[patch][i][j].normal.z << endl;
-				glNormal3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
-				glVertex3f(allOutputPoints[patch][i][j].point.x, allOutputPoints[patch][i][j].point.y, allOutputPoints[patch][i][j].point.z);
+					glNormal3f(allOutputPoints[patch][i+1][j].normal.x, allOutputPoints[patch][i+1][j].normal.y, allOutputPoints[patch][i+1][j].normal.z);
+					glVertex3f(allOutputPoints[patch][i+1][j].point.x, allOutputPoints[patch][i+1][j].point.y, allOutputPoints[patch][i+1][j].point.z);
 
-				glNormal3f(allOutputPoints[patch][i+1][j].normal.x, allOutputPoints[patch][i+1][j].normal.y, allOutputPoints[patch][i+1][j].normal.z);
-				glVertex3f(allOutputPoints[patch][i+1][j].point.x, allOutputPoints[patch][i+1][j].point.y, allOutputPoints[patch][i+1][j].point.z);
+					glNormal3f(allOutputPoints[patch][i][j+1].normal.x, allOutputPoints[patch][i][j+1].normal.y, allOutputPoints[patch][i][j+1].normal.z);
+					glVertex3f(allOutputPoints[patch][i][j+1].point.x, allOutputPoints[patch][i][j+1].point.y, allOutputPoints[patch][i][j+1].point.z);
+					glEnd();
 
-				glNormal3f(allOutputPoints[patch][i][j+1].normal.x, allOutputPoints[patch][i][j+1].normal.y, allOutputPoints[patch][i][j+1].normal.z);
-				glVertex3f(allOutputPoints[patch][i][j+1].point.x, allOutputPoints[patch][i][j+1].point.y, allOutputPoints[patch][i][j+1].point.z);
-				glEnd();
+					glBegin(GL_TRIANGLES);
+					//cout << "here's a normal:   " << allOutputPoints[patch][i][j].normal.x << allOutputPoints[patch][i][j].normal.y << allOutputPoints[patch][i][j].normal.z << endl;
+					glNormal3f(allOutputPoints[patch][i+1][j].normal.x, allOutputPoints[patch][i+1][j].normal.y, allOutputPoints[patch][i+1][j].normal.z);
+					glVertex3f(allOutputPoints[patch][i+1][j].point.x, allOutputPoints[patch][i+1][j].point.y, allOutputPoints[patch][i+1][j].point.z);
 
-				glBegin(GL_TRIANGLES);
-				//cout << "here's a normal:   " << allOutputPoints[patch][i][j].normal.x << allOutputPoints[patch][i][j].normal.y << allOutputPoints[patch][i][j].normal.z << endl;
-				glNormal3f(allOutputPoints[patch][i+1][j].normal.x, allOutputPoints[patch][i+1][j].normal.y, allOutputPoints[patch][i+1][j].normal.z);
-				glVertex3f(allOutputPoints[patch][i+1][j].point.x, allOutputPoints[patch][i+1][j].point.y, allOutputPoints[patch][i+1][j].point.z);
+					glNormal3f(allOutputPoints[patch][i+1][j+1].normal.x, allOutputPoints[patch][i+1][j+1].normal.y, allOutputPoints[patch][i+1][j+1].normal.z);
+					glVertex3f(allOutputPoints[patch][i+1][j+1].point.x, allOutputPoints[patch][i+1][j+1].point.y, allOutputPoints[patch][i+1][j+1].point.z);
 
-				glNormal3f(allOutputPoints[patch][i+1][j+1].normal.x, allOutputPoints[patch][i+1][j+1].normal.y, allOutputPoints[patch][i+1][j+1].normal.z);
-				glVertex3f(allOutputPoints[patch][i+1][j+1].point.x, allOutputPoints[patch][i+1][j+1].point.y, allOutputPoints[patch][i+1][j+1].point.z);
+					glNormal3f(allOutputPoints[patch][i][j+1].normal.x, allOutputPoints[patch][i][j+1].normal.y, allOutputPoints[patch][i][j+1].normal.z);
+					glVertex3f(allOutputPoints[patch][i][j+1].point.x, allOutputPoints[patch][i][j+1].point.y, allOutputPoints[patch][i][j+1].point.z);
+					glEnd();
 
-				glNormal3f(allOutputPoints[patch][i][j+1].normal.x, allOutputPoints[patch][i][j+1].normal.y, allOutputPoints[patch][i][j+1].normal.z);
-				glVertex3f(allOutputPoints[patch][i][j+1].point.x, allOutputPoints[patch][i][j+1].point.y, allOutputPoints[patch][i][j+1].point.z);
-				glEnd();
-
+				}
 			}
 		}
+	} else {
+		// adaptive subdivision
+
 	}
-
-	/*for(unsigned int patch=0; patch<allOutputPoints.size(); patch++) {
-		for (unsigned int i=0; i<allOutputPoints[patch].size(); i++) {
-			glBegin(GL_LINE_STRIP);
-			for (unsigned int j = 0; j<allOutputPoints[patch][i].size(); j++) {
-				//glBegin(GL_QUADS);
-
-				glVertex3f(allOutputPoints[patch][j][i].point.x, allOutputPoints[patch][j][i].point.y, allOutputPoints[patch][j][i].point.z);
-
-				// used later for shading
-				/*glNormal3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
-
-				cout << "here's a normal:   " << allOutputPoints[patch][i][j].normal.x << allOutputPoints[patch][i][j].normal.y << allOutputPoints[patch][i][j].normal.z << endl;
-				glColor3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
-				glVertex3f(allOutputPoints[patch][i][j].point.x, allOutputPoints[patch][i][j].point.y, allOutputPoints[patch][i][j].point.z);
-				glVertex3f(allOutputPoints[patch][i+1][j].point.x, allOutputPoints[patch][i+1][j].point.y, allOutputPoints[patch][i+1][j].point.z);
-				glVertex3f(allOutputPoints[patch][i+1][j+1].point.x, allOutputPoints[patch][i+1][j+1].point.y, allOutputPoints[patch][i+1][j+1].point.z);
-				glVertex3f(allOutputPoints[patch][i][j+1].point.x, allOutputPoints[patch][i][j+1].point.y, allOutputPoints[patch][i][j+1].point.z);
-				glEnd();*/
-
-
-				/*glBegin(GL_POINTS);e
-				glVertex3f(allOutputPoints[i][j].point.x, allOutputPoints[i][j].point.y, allOutputPoints[i][j].point.z);
-				glEnd();
-			}
-			//glEnd();
-		}
-		glEnd();
-	}*/
-
-	/* old version
-	// draw all bezier patches
-	for(unsigned int i=0; i<numPatches; i++) {
-
-		BezierPatch nextPatch = outputPatches[i];
-		int ni = nextPatch.points.size();
-		int nj = nextPatch.points[0].size();
-		for (unsigned int i=0; i<ni; i++) {
-			for (unsigned int j=0; j<nj; j++) {
-				// for now, just draw dots for each control point
-				glBegin(GL_POINTS);
-				glVertex3f(nextPatch.points[i][j].x, nextPatch.points[i][j].y, nextPatch.points[i][j].z);
-				glEnd();
-			}
-		}
-	}*/
-
-	/* LEFTOVER STUFF
-	glColor3f(1.0f,0.0f,0.0f);                   // setting the color to pure red 90% for the rect
-	glBegin(GL_POLYGON);                         // draw rectangle 
-	glVertex3f(-0.8f, 0.0f, 0.0f);               // bottom left corner of rectangle
-	glVertex3f(-0.8f, 0.5f, 0.0f);               // top left corner of rectangle
-	glVertex3f( 0.0f, 0.5f, 0.0f);               // top right corner of rectangle
-	glVertex3f( 0.0f, 0.0f, 0.0f);               // bottom right corner of rectangle
-	glEnd(); */
 	//-----------------------------------------------------------------------
 
 	//glClear(GL_DEPTH_BUFFER_BIT);
@@ -652,7 +607,6 @@ int main(int argc, char *argv[]) {
 	glutInitWindowPosition(0, 0);
 	glutCreateWindow("as3 Bezier Curves");
 	initScene();        
-	//glutInit(&argc, argv);
 	//This tells glut to use a double-buffered window with red, green, and blue channels                        // quick function to set up scene
 	glutDisplayFunc(myDisplay);                  // function to run when its time to draw something
 	glutReshapeFunc(myReshape);                  // function to run when the window gets resized
