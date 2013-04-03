@@ -67,6 +67,8 @@ bool uniform;
 bool* keyStates = new bool[256];
 bool* specialKeys = new bool[256];
 
+bool toggleWireframe = true;
+
 float x = 0.0, y = 0.0, z = 5.0;
 float translate_x = 0.0, translate_y = 0.0;
 float angle_x = 0.0, angle_y = 0.0;
@@ -125,6 +127,10 @@ void specialKeysUp(int key, int x, int y) {
 	specialKeys[key] = false;
 }
 
+void toggleWireframeDisplay() {
+	toggleWireframe = (!toggleWireframe);
+}
+
 void keyOperations() {
 	if(keyStates['-']) {
 		z += 0.01f;
@@ -163,6 +169,8 @@ void keyOperations() {
 		} else {
 			angle_x += 0.1f;
 		}
+	} else if (keyStates['w']) {
+		toggleWireframeDisplay();
 	}
 }
 
@@ -263,7 +271,14 @@ void myDisplay() {
 	                         // make sure transformation is "zero'd"
 	glColor3f(1.0f,0.0f,0.0f); 		//default of red dot
 	glPointSize(1.0f);
-	//glutWireTorus(0.5, 3, 15, 30);
+
+	if(toggleWireframe) {
+		glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+	} else {
+		glPolygonMode( GL_FRONT_AND_BACK, GL_LINE);
+	}
+	
+	glutSolidTorus(0.5, 3, 15, 30);
 
 
 	//----------------------- code to draw objects --------------------------
@@ -380,14 +395,6 @@ void parseInput(string file) {
 	}
 	int debug;
 	debug = 5;
-
-	for(unsigned int i=0; i<4; i++) {
-		for(unsigned int j=0; j<4; j++) {
-			cout << inputPatches[0].points[i][j].x << " ";
-			cout << inputPatches[0].points[i][j].y << " ";
-			cout << inputPatches[0].points[i][j].z << endl;
-		}
-	}
 }
 
 
