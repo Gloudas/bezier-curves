@@ -97,6 +97,8 @@ Viewport    viewport;
 int numPatches;
 vector<BezierPatch> inputPatches;
 vector<BezierPatch> outputPatches;
+Vector3 minDimensions = Vector3();
+Vector3 maxDimensions = Vector3();
 float subdivision;
 float tau;		// used for tesselation testing
 bool uniform;
@@ -107,7 +109,7 @@ bool* specialKeys = new bool[256];
 bool toggleWireframe = true;
 bool toggleSmooth = false;
 
-float x = 0.0, y = 5.0, z = 0.0;
+float x = 0.0, y = 0.0, z = 0.0;
 float translate_x = 0.0, translate_z = 0.0;
 float angle_x = 0.0, angle_z = 0.0;
 
@@ -177,12 +179,12 @@ void keyOperations() {
 	if(keyStates['-']) {
 		y += 0.5f;
 		if(y >= 40.0f) {
-			y = 40.0f;
+			//y = 40.0f;
 		}
 	} else if (keyStates['=']) {
 		y += -0.5f;
 		if(y <= 1.0f) {  // 5.0
-			y = 1.0f;
+			//y = 1.0f;
 		}
 	} else if(specialKeys[GLUT_KEY_LEFT]) {
 		if(shift_pressed) {
@@ -221,8 +223,8 @@ void initScene(){
 	glEnable(GL_LIGHT1);
 	glEnable(GL_DEPTH_TEST);
 
-  glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear to black, fully transparent
-  myReshape(viewport.w,viewport.h);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear to black, fully transparent
+	myReshape(viewport.w,viewport.h);
 }
 
 //***************************************************
@@ -450,7 +452,11 @@ void myDisplay() {
 	glMatrixMode(GL_MODELVIEW);                  // indicate we are specifying camera transformations
 	glLoadIdentity();   
 
-	gluLookAt(x, y, z, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);	
+	float xcenter = (minDimensions.x+maxDimensions.x)/2;
+	float ycenter = (minDimensions.y+maxDimensions.y)/2;
+	float zcenter = (minDimensions.z+maxDimensions.z)/2;
+	float width = max( max(maxDimensions.x-minDimensions.x, maxDimensions.y-minDimensions.y), maxDimensions.z-minDimensions.z) + 3.0;
+	gluLookAt(xcenter, (ycenter+y+width), zcenter, xcenter, ycenter, zcenter, 0.0, 0.0, 1.0);
 	glTranslatef(translate_x, 0.0f, translate_z);
 	glRotatef(angle_z, 0.0, 0.0, 1.0);
 	glRotatef(angle_x, 1.0, 0.0, 0.0);
@@ -659,6 +665,80 @@ void parseInput(string file) {
 				newBezier.points[row][3].x = atof(splitline[9].c_str());
 				newBezier.points[row][3].y = atof(splitline[10].c_str());
 				newBezier.points[row][3].z = atof(splitline[11].c_str());
+
+				if (newBezier.points[row][0].x < minDimensions.x) {
+					minDimensions.x = newBezier.points[row][0].x;
+				}
+				if (newBezier.points[row][0].y < minDimensions.y) {
+					minDimensions.y = newBezier.points[row][0].y;
+				}
+				if (newBezier.points[row][0].z < minDimensions.z) {
+					minDimensions.z = newBezier.points[row][0].z;
+				}
+				if (newBezier.points[row][1].x < minDimensions.x) {
+					minDimensions.x = newBezier.points[row][1].x;
+				}
+				if (newBezier.points[row][1].y < minDimensions.y) {
+					minDimensions.y = newBezier.points[row][1].y;
+				}
+				if (newBezier.points[row][1].z < minDimensions.z) {
+					minDimensions.z = newBezier.points[row][1].z;
+				}
+				if (newBezier.points[row][2].x < minDimensions.x) {
+					minDimensions.x = newBezier.points[row][2].x;
+				}
+				if (newBezier.points[row][2].y < minDimensions.y) {
+					minDimensions.y = newBezier.points[row][2].y;
+				}
+				if (newBezier.points[row][2].z < minDimensions.z) {
+					minDimensions.z = newBezier.points[row][2].z;
+				}
+				if (newBezier.points[row][3].x < minDimensions.x) {
+					minDimensions.x = newBezier.points[row][3].x;
+				}
+				if (newBezier.points[row][3].y < minDimensions.y) {
+					minDimensions.y = newBezier.points[row][3].y;
+				}
+				if (newBezier.points[row][3].z < minDimensions.z) {
+					minDimensions.z = newBezier.points[row][3].z;
+				}
+				// MAX VALUES
+				if (newBezier.points[row][0].x > maxDimensions.x) {
+					maxDimensions.x = newBezier.points[row][0].x;
+				}
+				if (newBezier.points[row][0].y > maxDimensions.y) {
+					maxDimensions.y = newBezier.points[row][0].y;
+				}
+				if (newBezier.points[row][0].z > maxDimensions.z) {
+					maxDimensions.z = newBezier.points[row][0].z;
+				}
+				if (newBezier.points[row][1].x > maxDimensions.x) {
+					maxDimensions.x = newBezier.points[row][1].x;
+				}
+				if (newBezier.points[row][1].y > maxDimensions.y) {
+					maxDimensions.y = newBezier.points[row][1].y;
+				}
+				if (newBezier.points[row][1].z > maxDimensions.z) {
+					maxDimensions.z = newBezier.points[row][1].z;
+				}
+				if (newBezier.points[row][2].x > maxDimensions.x) {
+					maxDimensions.x = newBezier.points[row][2].x;
+				}
+				if (newBezier.points[row][2].y > maxDimensions.y) {
+					maxDimensions.y = newBezier.points[row][2].y;
+				}
+				if (newBezier.points[row][2].z > maxDimensions.z) {
+					maxDimensions.z = newBezier.points[row][2].z;
+				}
+				if (newBezier.points[row][3].x > maxDimensions.x) {
+					maxDimensions.x = newBezier.points[row][3].x;
+				}
+				if (newBezier.points[row][3].y > maxDimensions.y) {
+					maxDimensions.y = newBezier.points[row][3].y;
+				}
+				if (newBezier.points[row][3].z > maxDimensions.z) {
+					maxDimensions.z = newBezier.points[row][3].z;
+				}
 				row++;	
 			} else {
 				cout << "there was an issue with parsing input files \n" << endl;
@@ -667,8 +747,6 @@ void parseInput(string file) {
 
 		inpfile.close();
 	}
-	int debug;
-	debug = 5;
 }
 
 
