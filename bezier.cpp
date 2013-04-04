@@ -43,6 +43,17 @@ BezierPatch::BezierPatch() {
 	}
 }
 
+class ParametricPoint {
+public:
+	ParametricPoint(float u, float v);
+	float u,v;
+};
+
+ParametricPoint::ParametricPoint(float u, float v) {
+	this->u = u;
+	this->v = v;
+}
+
 class PointAndNormal {
 public:
 	PointAndNormal();
@@ -61,6 +72,24 @@ PointAndNormal::PointAndNormal(Point p, Normal n) {
 	this->normal = n;
 }
 
+class Triangle {
+public:
+	Triangle(PointAndNormal p1, ParametricPoint uv1, PointAndNormal p2, ParametricPoint uv2, PointAndNormal p3, ParametricPoint uv3);
+	vector<PointAndNormal> points;
+	vector<ParametricPoint> parametrics;
+};
+
+Triangle::Triangle(PointAndNormal p1, ParametricPoint uv1, PointAndNormal p2, ParametricPoint uv2, PointAndNormal p3, ParametricPoint uv3) {
+	points.push_back(p1);
+	points.push_back(p2);
+	points.push_back(p3);
+	parametrics.push_back(uv1);
+	parametrics.push_back(uv2);
+	parametrics.push_back(uv3);
+}
+
+
+
 //****************************************************
 // Global Variables
 //****************************************************
@@ -69,6 +98,7 @@ int numPatches;
 vector<BezierPatch> inputPatches;
 vector<BezierPatch> outputPatches;
 float subdivision;
+float tau;		// used for tesselation testing
 bool uniform;
 
 bool* keyStates = new bool[256];
@@ -150,34 +180,31 @@ void keyOperations() {
 			y = 40.0f;
 		}
 	} else if (keyStates['=']) {
-		//int mod = glutGetModifiers();
-		//if(shift_pressed) {
-			y +=-0.01f;
-			if(y <= 1.0f) {
-				y = 1.0f;
-			}
-		//}
+		y += -0.5f;
+		if(y <= 1.0f) {  // 5.0
+			y = 1.0f;
+		}
 	} else if(specialKeys[GLUT_KEY_LEFT]) {
 		if(shift_pressed) {
-			translate_x += 0.01f;
+			translate_x += .5f;
 		} else {
 			angle_z -= 5.0f;
 		}
 	} else if(specialKeys[GLUT_KEY_RIGHT]) {
 		if(shift_pressed) {
-			translate_x -= 0.01f;
+			translate_x -= .5f;
 		} else {
 			angle_z += 5.0f;
 		}
 	} else if(specialKeys[GLUT_KEY_UP]) {
 		if(shift_pressed) {
-			translate_z += 0.01f;
+			translate_z += .5f;
 		} else {
-			angle_x += 5.f; //.1
+			angle_x += 5.0f; //.1
 		}
 	} else if(specialKeys[GLUT_KEY_DOWN]) {
 		if(shift_pressed) {
-			translate_z -= 0.01f;
+			translate_z -= .5f;
 		} else {
 			angle_x -= 5.0f;
 		}
@@ -197,74 +224,6 @@ void initScene(){
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear to black, fully transparent
   myReshape(viewport.w,viewport.h);
 }
-
-/*double BezierBlend(int k, double mu, int n) {
-
-	int nn,kn,nkn;
-	double blend=1;
-	nn = n;
-	kn = k;
-	nkn = n - k;
-
-	while (nn >= 1) {
-	  	blend *= nn;
-	  	nn--;
-	  	if (kn > 1) {
-	     	blend /= (double)kn;
-	     	kn--;
-	  	}
-	  	if (nkn > 1) {
-	     	blend /= (double)nkn;
-	     	nkn--;
-	  	}
-	}
-	if (k > 0)
-		blend *= pow(mu,(double)k);
-	if (n-k > 0)
-	  	blend *= pow(1-mu,(double)(n-k));
-
-	return blend;
-}
-
-void computeUniformSubdivision(const BezierPatch inputBezier, BezierPatch *outputBezier) {
-
-	unsigned int i,j,ki,kj;
-	double mui, muj, bi, bj;
-
-	int ni = inputBezier.points.size();
-	int nj = inputBezier.points[0].size();
-	int resolutionI = ni * (int)(1.001/subdivision);
-	int resolutionJ = nj * (int)(1.001/subdivision);
-
-	vector< vector< Vector3> > input = inputBezier.points;
-	// instantiate the output bezier with size resolutionI * resolutionJ
-	vector< vector< Vector3> > output;
-	output.resize(resolutionI);
-	for (i=0; i<resolutionI; i++) {
-		output[i].resize(resolutionJ);
-	}
-
-	for (i=0; i<resolutionI; i++) {
-		mui = i / (double)(resolutionI-1);	// note: i dont understand the -1 here. Maybe because there is an extra point added in bezier?
-		for (j=0; j<resolutionJ; j++) {
-			muj = j / (double)(resolutionJ-1);
-			output[i][j].x = 0;
-			output[i][j].y = 0;
-			output[i][j].z = 0;
-			for (ki=0; ki<ni; ki++) {
-				bi = BezierBlend(ki, mui, ni);
-				for (kj=0; kj<nj; kj++) {
-					bj = BezierBlend(kj, muj, nj);
-					output[i][j].x += (input[ki][kj].x * bi * bj);
-					output[i][j].y += (input[ki][kj].y * bi * bj);
-					output[i][j].z += (input[ki][kj].z * bi * bj);
-				}
-			}
-		}		
-	}
-
-	outputBezier->points = output;
-}*/
 
 //***************************************************
 // function that does the actual drawing
@@ -361,7 +320,7 @@ PointAndNormal bezPatchInterp(BezierPatch patch, float u, float v) {
 	return output;
 }
 
-void subDividePatch(const BezierPatch patch, vector <vector<PointAndNormal> > & newPoints) {
+void uniformSubDividePatch(const BezierPatch patch, vector <vector<PointAndNormal> > & newPoints) {
 	// computer number of subdivisions for our step size
 	int numDiv = (int)(1.001/subdivision);
 	float u,v;
@@ -383,6 +342,105 @@ void subDividePatch(const BezierPatch patch, vector <vector<PointAndNormal> > & 
 	}
 }
 
+void adaptiveSubDividePatch(const BezierPatch patch, Triangle subTriangle, vector<Triangle> & newTriangles, int recursionDepth) {
+	
+	float edgeError;
+	bool e1Fail, e2Fail, e3Fail; 
+	e1Fail = e2Fail = e3Fail = false;
+
+	if (recursionDepth > 5) {
+		newTriangles.push_back(subTriangle);
+		return;
+	}
+
+	// check which edges fail  
+	Point edge1Midpoint = (subTriangle.points[0].point + subTriangle.points[1].point) / 2;
+	float edge1u = (subTriangle.parametrics[0].u + subTriangle.parametrics[1].u) / 2;
+	float edge1v = (subTriangle.parametrics[0].v + subTriangle.parametrics[1].v) / 2;
+	PointAndNormal edge1Surface = bezPatchInterp(patch, edge1u, edge1v);
+	edgeError = Vector3::pointSubtraction(edge1Surface.point, edge1Midpoint).magnitude();
+	if (edgeError >= tau) {
+		e1Fail = true;
+	}
+
+	Point edge2Midpoint = (subTriangle.points[0].point + subTriangle.points[2].point) / 2;
+	float edge2u = (subTriangle.parametrics[0].u + subTriangle.parametrics[2].u) / 2;
+	float edge2v = (subTriangle.parametrics[0].v + subTriangle.parametrics[2].v) / 2;
+	PointAndNormal edge2Surface = bezPatchInterp(patch, edge2u, edge2v);
+	edgeError = Vector3::pointSubtraction(edge2Surface.point, edge2Midpoint).magnitude();
+	if (edgeError >= tau) {
+		e2Fail = true;
+	}
+
+	Point edge3Midpoint = (subTriangle.points[1].point + subTriangle.points[2].point) / 2;
+	float edge3u = (subTriangle.parametrics[1].u + subTriangle.parametrics[2].u) / 2;
+	float edge3v = (subTriangle.parametrics[1].v + subTriangle.parametrics[2].v) / 2;
+	PointAndNormal edge3Surface = bezPatchInterp(patch, edge3u, edge3v);
+	edgeError = Vector3::pointSubtraction(edge3Surface.point, edge3Midpoint).magnitude();
+	if (edgeError >= tau) {
+		e3Fail = true;
+	}
+
+	// if no failures, add subTriangle to newTriangles (base case)
+	if (!e1Fail && !e2Fail && !e3Fail) {
+		newTriangles.push_back(subTriangle);
+		return;
+	}
+
+	// if there are failures, create new triangles according to failed edge
+	ParametricPoint edge1uv = ParametricPoint(edge1u, edge1v);
+	ParametricPoint edge2uv = ParametricPoint(edge2u, edge2v);
+	ParametricPoint edge3uv = ParametricPoint(edge3u, edge3v);
+
+	if (e1Fail && !e2Fail && !e3Fail) {
+		Triangle tri1 = Triangle(subTriangle.points[0], subTriangle.parametrics[0], edge1Surface, edge1uv, subTriangle.points[2], subTriangle.parametrics[2]);
+		Triangle tri2 = Triangle(edge1Surface, edge1uv, subTriangle.points[1], subTriangle.parametrics[1], subTriangle.points[2], subTriangle.parametrics[2]);
+		adaptiveSubDividePatch(patch, tri1, newTriangles, recursionDepth+1);
+		adaptiveSubDividePatch(patch, tri2, newTriangles, recursionDepth+1);
+	} else if (!e1Fail && e2Fail && !e3Fail) {
+		Triangle tri1 = Triangle(subTriangle.points[0], subTriangle.parametrics[0], subTriangle.points[1], subTriangle.parametrics[1], edge2Surface, edge2uv);
+		Triangle tri2 = Triangle(edge2Surface, edge2uv, subTriangle.points[1], subTriangle.parametrics[1], subTriangle.points[2], subTriangle.parametrics[2]);
+		adaptiveSubDividePatch(patch, tri1, newTriangles, recursionDepth+1);
+		adaptiveSubDividePatch(patch, tri2, newTriangles, recursionDepth+1);
+	} else if (!e1Fail && !e2Fail && e3Fail) {
+		Triangle tri1 = Triangle(subTriangle.points[0], subTriangle.parametrics[0], subTriangle.points[1], subTriangle.parametrics[1], edge3Surface, edge3uv);
+		Triangle tri2 = Triangle(subTriangle.points[0], subTriangle.parametrics[0], edge3Surface, edge3uv, subTriangle.points[2], subTriangle.parametrics[2]);
+		adaptiveSubDividePatch(patch, tri1, newTriangles, recursionDepth+1);
+		adaptiveSubDividePatch(patch, tri2, newTriangles, recursionDepth+1);
+	} else if (e1Fail && e2Fail && !e3Fail) {
+		Triangle tri1 = Triangle(subTriangle.points[0], subTriangle.parametrics[0], edge1Surface, edge1uv, edge2Surface, edge2uv);
+		Triangle tri2 = Triangle(edge1Surface, edge1uv, subTriangle.points[1], subTriangle.parametrics[1], edge2Surface, edge2uv);
+		Triangle tri3 = Triangle(edge2Surface, edge2uv, subTriangle.points[1], subTriangle.parametrics[1], subTriangle.points[2], subTriangle.parametrics[2]);
+		adaptiveSubDividePatch(patch, tri1, newTriangles, recursionDepth+1);
+		adaptiveSubDividePatch(patch, tri2, newTriangles, recursionDepth+1);
+		adaptiveSubDividePatch(patch, tri3, newTriangles, recursionDepth+1);
+	} else if (!e1Fail && e2Fail && e3Fail) {
+		Triangle tri1 = Triangle(subTriangle.points[0], subTriangle.parametrics[0], subTriangle.points[1], subTriangle.parametrics[1], edge3Surface, edge3uv);
+		Triangle tri2 = Triangle(subTriangle.points[0], subTriangle.parametrics[0], edge3Surface, edge3uv, edge2Surface, edge2uv);
+		Triangle tri3 = Triangle(edge2Surface, edge2uv, edge3Surface, edge3uv, subTriangle.points[2], subTriangle.parametrics[2]);
+		adaptiveSubDividePatch(patch, tri1, newTriangles, recursionDepth+1);
+		adaptiveSubDividePatch(patch, tri2, newTriangles, recursionDepth+1);
+		adaptiveSubDividePatch(patch, tri3, newTriangles, recursionDepth+1);
+	} else if (e1Fail && !e2Fail && e3Fail) {
+		Triangle tri1 = Triangle(subTriangle.points[0], subTriangle.parametrics[0], edge1Surface, edge1uv, subTriangle.points[2], subTriangle.parametrics[2]);
+		Triangle tri2 = Triangle(edge1Surface, edge1uv, subTriangle.points[1], subTriangle.parametrics[1], edge3Surface, edge3uv);
+		Triangle tri3 = Triangle(edge1Surface, edge1uv, edge3Surface, edge3uv, subTriangle.points[2], subTriangle.parametrics[2]);
+		adaptiveSubDividePatch(patch, tri1, newTriangles, recursionDepth+1);
+		adaptiveSubDividePatch(patch, tri2, newTriangles, recursionDepth+1);
+		adaptiveSubDividePatch(patch, tri3, newTriangles, recursionDepth+1);
+	} else if (e1Fail && e2Fail && e3Fail) {
+		Triangle tri1 = Triangle(subTriangle.points[0], subTriangle.parametrics[0], edge1Surface, edge1uv, edge2Surface, edge2uv);
+		Triangle tri2 = Triangle(edge1Surface, edge1uv, subTriangle.points[1], subTriangle.parametrics[1], edge3Surface, edge3uv);
+		Triangle tri3 = Triangle(edge1Surface, edge1uv, edge2Surface, edge2uv, edge3Surface, edge3uv);
+		Triangle tri4 = Triangle(edge2Surface, edge2uv, edge3Surface, edge3uv, subTriangle.points[2], subTriangle.parametrics[2]);
+		adaptiveSubDividePatch(patch, tri1, newTriangles, recursionDepth+1);
+		adaptiveSubDividePatch(patch, tri2, newTriangles, recursionDepth+1);
+		adaptiveSubDividePatch(patch, tri3, newTriangles, recursionDepth+1);
+		adaptiveSubDividePatch(patch, tri4, newTriangles, recursionDepth+1);
+	}
+
+}
+
 void myDisplay() {
 
 	keyOperations();
@@ -392,19 +450,13 @@ void myDisplay() {
 	glMatrixMode(GL_MODELVIEW);                  // indicate we are specifying camera transformations
 	glLoadIdentity();   
 
-	gluLookAt(x, y, z, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
-
-
-	
+	gluLookAt(x, y, z, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);	
 	glTranslatef(translate_x, 0.0f, translate_z);
-
 	glRotatef(angle_z, 0.0, 0.0, 1.0);
 	glRotatef(angle_x, 1.0, 0.0, 0.0);
-	                         // make sure transformation is "zero'd"
-	glColor3f(.2f,0.0f,0.0f); 		//default of red dot
-	glPointSize(1.0f);
+	//glColor3f(.2f,0.0f,0.0f);
+	//glPointSize(1.0f);
 
-	//commented out for now
 	if(toggleSmooth) {
 		//cout<<"SMooth toggled"<<endl;
 		//glEnable(GL_SMOOTH);
@@ -420,11 +472,6 @@ void myDisplay() {
 	} else {
 		glPolygonMode( GL_FRONT_AND_BACK, GL_LINE);
 	}
-
-	//glEnable(GL_LIGHTING);
-	//glEnable(GL_LIGHT0);
-	
-	//glutSolidTorus(0.5, 3, 5, 10);
 
 	//----------------------- code to draw objects --------------------------
 	//Add ambient light
@@ -445,18 +492,48 @@ void myDisplay() {
     glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
 
 
-	// a vector of a collection of points which correspond to a bezier patch's output
-	vector <vector< vector<PointAndNormal> > > allOutputPoints;
-	//allOutputPoints.resize(numPatches);
+    // COMPUTE ALL BEZIER POINTS
 
-	// compute all bezier patches
-	for(unsigned int i=0; i<numPatches; i++) {
+    vector <vector< vector<PointAndNormal> > > allOutputPoints;		// used for uniform
+    vector <vector <Triangle> > allOutputTriangles;		// used for adaptive
 
-		vector <vector<PointAndNormal> > newPoints;
-		subDividePatch(inputPatches[i], newPoints);
-		allOutputPoints.push_back(newPoints);
-	}
-	
+    if (uniform) {
+
+		for(unsigned int i=0; i<numPatches; i++) {
+
+			vector <vector<PointAndNormal> > newPoints;
+			uniformSubDividePatch(inputPatches[i], newPoints);
+			allOutputPoints.push_back(newPoints);
+		}
+
+    } else {
+
+    	// Adaptive
+    	for (unsigned int i=0; i<numPatches; i++) {
+
+    		// Find the four corners of the patch
+    		PointAndNormal P1 = bezPatchInterp(inputPatches[i], 0, 0);
+    		ParametricPoint parametricP1 = ParametricPoint(0, 0);
+    		PointAndNormal P2 = bezPatchInterp(inputPatches[i], 1.0, 0);
+    		ParametricPoint parametricP2 = ParametricPoint(1.0, 0);
+    		PointAndNormal P3 = bezPatchInterp(inputPatches[i], 0, 1.0);
+    		ParametricPoint parametricP3 = ParametricPoint(0, 1.0);
+    		PointAndNormal P4 = bezPatchInterp(inputPatches[i], 1.0, 1.0);
+    		ParametricPoint parametricP4 = ParametricPoint(1.0, 1.0);
+    		// Create the two starting triangles from the patch
+    		Triangle triangle1 = Triangle(P1, parametricP1, P2, parametricP2, P3, parametricP3);
+    		Triangle triangle2 = Triangle(P2, parametricP2, P3, parametricP3, P4, parametricP4);
+
+    		vector<Triangle> newTriangles;
+    		// Adaptively subdivide first triangle
+    		adaptiveSubDividePatch(inputPatches[i], triangle1, newTriangles, 0);
+    		// Adaptively subdivide second triangle
+    		adaptiveSubDividePatch(inputPatches[i], triangle2, newTriangles, 0);
+
+    		allOutputTriangles.push_back(newTriangles);
+    	}
+
+    }
 
     if (uniform) {
 		for(unsigned int patch=0; patch<allOutputPoints.size(); patch++) {
@@ -492,8 +569,25 @@ void myDisplay() {
 			}
 		}
 	} else {
-		// adaptive subdivision
 
+		// adaptive subdivision
+		for (unsigned int i=0; i<(allOutputTriangles.size()); i++) {
+			for (unsigned int j=0; j<(allOutputTriangles[i].size()); j++) {
+
+				glBegin(GL_TRIANGLES);
+
+				glNormal3f(allOutputTriangles[i][j].points[0].normal.x, allOutputTriangles[i][j].points[0].normal.y, allOutputTriangles[i][j].points[0].normal.z);
+				glVertex3f(allOutputTriangles[i][j].points[0].point.x, allOutputTriangles[i][j].points[0].point.y, allOutputTriangles[i][j].points[0].point.z);
+
+				glNormal3f(allOutputTriangles[i][j].points[1].normal.x, allOutputTriangles[i][j].points[1].normal.y, allOutputTriangles[i][j].points[1].normal.z);
+				glVertex3f(allOutputTriangles[i][j].points[1].point.x, allOutputTriangles[i][j].points[1].point.y, allOutputTriangles[i][j].points[1].point.z);
+
+				glNormal3f(allOutputTriangles[i][j].points[2].normal.x, allOutputTriangles[i][j].points[2].normal.y, allOutputTriangles[i][j].points[2].normal.z);
+				glVertex3f(allOutputTriangles[i][j].points[2].point.x, allOutputTriangles[i][j].points[2].point.y, allOutputTriangles[i][j].points[2].point.z);
+
+				glEnd();
+			}
+		}
 	}
 	//-----------------------------------------------------------------------
 
@@ -585,6 +679,7 @@ int main(int argc, char *argv[]) {
 	parseInput(inputFile);
 
 	subdivision = atof(argv[2]);
+	tau = atof(argv[2]);
 
 	uniform = true;
 	if (argc > 3) {
