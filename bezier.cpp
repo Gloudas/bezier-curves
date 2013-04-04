@@ -177,36 +177,36 @@ void toggleWireframeDisplay() {
 
 void keyOperations() {
 	if(keyStates['-']) {
-		y += 0.5f;
+		y += 0.2f;
 		if(y >= 40.0f) {
 			//y = 40.0f;
 		}
 	} else if (keyStates['=']) {
-		y += -0.5f;
+		y += -0.2f;
 		if(y <= 1.0f) {  // 5.0
 			//y = 1.0f;
 		}
 	} else if(specialKeys[GLUT_KEY_LEFT]) {
 		if(shift_pressed) {
-			translate_x += .5f;
+			translate_x += .2f;
 		} else {
 			angle_z -= 5.0f;
 		}
 	} else if(specialKeys[GLUT_KEY_RIGHT]) {
 		if(shift_pressed) {
-			translate_x -= .5f;
+			translate_x -= .2f;
 		} else {
 			angle_z += 5.0f;
 		}
 	} else if(specialKeys[GLUT_KEY_UP]) {
 		if(shift_pressed) {
-			translate_z += .5f;
+			translate_z += .2f;
 		} else {
 			angle_x += 5.0f; //.1
 		}
 	} else if(specialKeys[GLUT_KEY_DOWN]) {
 		if(shift_pressed) {
-			translate_z -= .5f;
+			translate_z -= .2f;
 		} else {
 			angle_x -= 5.0f;
 		}
@@ -547,6 +547,7 @@ void myDisplay() {
 				//glBegin(GL_LINE_STRIP);
 				for (unsigned int j = 0; j<(allOutputPoints[patch][i].size()-1); j++) {
 					
+					/*
 					glBegin(GL_TRIANGLES);
 					//cout << "here's a normal:   " << allOutputPoints[patch][i][j].normal.x << allOutputPoints[patch][i][j].normal.y << allOutputPoints[patch][i][j].normal.z << endl;
 					glNormal3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
@@ -569,6 +570,24 @@ void myDisplay() {
 
 					glNormal3f(allOutputPoints[patch][i][j+1].normal.x, allOutputPoints[patch][i][j+1].normal.y, allOutputPoints[patch][i][j+1].normal.z);
 					glVertex3f(allOutputPoints[patch][i][j+1].point.x, allOutputPoints[patch][i][j+1].point.y, allOutputPoints[patch][i][j+1].point.z);
+					glEnd();
+					*/
+
+					glBegin(GL_POLYGON);
+					//cout << "here's a normal:   " << allOutputPoints[patch][i][j].normal.x << allOutputPoints[patch][i][j].normal.y << allOutputPoints[patch][i][j].normal.z << endl;
+					glNormal3f(allOutputPoints[patch][i][j].normal.x, allOutputPoints[patch][i][j].normal.y, allOutputPoints[patch][i][j].normal.z);
+					glVertex3f(allOutputPoints[patch][i][j].point.x, allOutputPoints[patch][i][j].point.y, allOutputPoints[patch][i][j].point.z);
+
+					glNormal3f(allOutputPoints[patch][i+1][j].normal.x, allOutputPoints[patch][i+1][j].normal.y, allOutputPoints[patch][i+1][j].normal.z);
+					glVertex3f(allOutputPoints[patch][i+1][j].point.x, allOutputPoints[patch][i+1][j].point.y, allOutputPoints[patch][i+1][j].point.z);
+
+					glNormal3f(allOutputPoints[patch][i+1][j+1].normal.x, allOutputPoints[patch][i+1][j+1].normal.y, allOutputPoints[patch][i+1][j+1].normal.z);
+					glVertex3f(allOutputPoints[patch][i+1][j+1].point.x, allOutputPoints[patch][i+1][j+1].point.y, allOutputPoints[patch][i+1][j+1].point.z);
+					
+					glNormal3f(allOutputPoints[patch][i][j+1].normal.x, allOutputPoints[patch][i][j+1].normal.y, allOutputPoints[patch][i][j+1].normal.z);
+					glVertex3f(allOutputPoints[patch][i][j+1].point.x, allOutputPoints[patch][i][j+1].point.y, allOutputPoints[patch][i][j+1].point.z);
+
+
 					glEnd();
 
 				}
@@ -775,8 +794,8 @@ int main(int argc, char *argv[]) {
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 	//glEnable(GL_DEPTH_TEST);
 	// Initalize theviewport size
-	viewport.w = 800;
-	viewport.h = 800;
+	viewport.w = 900;
+	viewport.h = 900;
 	//The size and position of the window
 	glutInitWindowSize(viewport.w, viewport.h);
 	glutInitWindowPosition(0, 0);
