@@ -625,7 +625,9 @@ int main(int argc, char *argv[]) {
 
 	// patch input file
 	string inputFile = argv[1];
+	cout<<"In"<<endl;
 	parseInput(inputFile);
+	cout<<"Out"<<endl;
 
 	subdivision = atof(argv[2]);
 
@@ -649,6 +651,7 @@ int main(int argc, char *argv[]) {
 	glutInitWindowSize(viewport.w, viewport.h);
 	glutInitWindowPosition(0, 0);
 	glutCreateWindow("as3 Bezier Curves");
+	cout<<"Got here"<<endl;
 	initScene();        
 	//This tells glut to use a double-buffered window with red, green, and blue channels                        // quick function to set up scene
 	glutDisplayFunc(myDisplay);                  // function to run when its time to draw something
