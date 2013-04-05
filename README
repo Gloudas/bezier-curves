@@ -1,0 +1,10 @@
+Brendan Rafeld cs184-bt
+Doug Wreden cs184-by
+
+Developed for Mac
+
+Submitted in cs184-bt:~/hw/as3/
+
+To compile just type: "make"
+
+To run, type "./as3 xxxxxx.xxx y.yy" where xxxxxx.xxxx is the name of the scene file to parse and y.yy is the steps for uniform subdivsion (or tau for adaptive tesselation with '-a' flag is specified)
